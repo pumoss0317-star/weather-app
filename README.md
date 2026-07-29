@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 天気予報アプリ
 
-## Getting Started
+都市名または現在地から、気温・天気・湿度・降水確率をカレンダーで日付を切り替えながら確認できるアプリです。[Next.js](https://nextjs.org)（App Router）+ [OpenWeatherMap API](https://openweathermap.org/api) を使用しています。
 
-First, run the development server:
+## セットアップ
+
+### 1. 依存関係のインストール
+
+```bash
+npm install
+```
+
+### 2. OpenWeatherMap APIキーの取得
+
+1. https://home.openweathermap.org/users/sign_up でアカウント作成（クレジットカード不要）
+2. 確認メールのリンクをクリックしてメール認証
+3. ログイン後、右上のユーザー名 →「My API keys」タブでキーを確認（自動生成された`Default`キーでOK）
+4. 発行直後は反映まで最大2時間ほどかかる場合があります
+
+### 3. 環境変数の設定
+
+`.env.local.example` をコピーして `.env.local` を作成し、取得したキーを設定します。
+
+```bash
+cp .env.local.example .env.local
+```
+
+```
+OPENWEATHER_API_KEY=あなたのAPIキー
+```
+
+`.env.local` は `.gitignore` 対象のため、コミットされません。
+
+### 4. 開発サーバー起動
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 を開いて確認してください。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## デプロイ（Vercel）
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Vercelにプロジェクトをインポート
+2. Project Settings → Environment Variables に `OPENWEATHER_API_KEY` を設定
+3. デプロイを実行
 
-## Learn More
+## 技術構成
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 16 (App Router) / TypeScript / Tailwind CSS
+- `app/api/weather/route.ts`: OpenWeatherMapの「現在の天気」「5日間/3時間ごと予報」APIをサーバー側で呼び出すRoute Handler（APIキーはここでのみ参照）
+- `components/Calendar.tsx`: 予報が取得できる日付のみ選択可能な自作カレンダー
+- `components/WeatherCard.tsx`: 選択日の気温・天気・湿度・降水確率を表示
