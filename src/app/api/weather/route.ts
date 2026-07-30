@@ -17,7 +17,7 @@ interface OwmForecastListItem {
 }
 
 interface OwmForecastResponse {
-  city: { name: string; country: string; timezone: number };
+  city: { name: string; country: string; timezone: number; coord: { lat: number; lon: number } };
   list: OwmForecastListItem[];
 }
 
@@ -140,7 +140,12 @@ export async function GET(request: NextRequest) {
     });
 
   const response: WeatherResponse = {
-    city: { name: forecastData.city.name, country: forecastData.city.country },
+    city: {
+      name: forecastData.city.name,
+      country: forecastData.city.country,
+      lat: forecastData.city.coord.lat,
+      lon: forecastData.city.coord.lon,
+    },
     current: {
       temp: Math.round(currentData.main.temp),
       feelsLike: Math.round(currentData.main.feels_like),

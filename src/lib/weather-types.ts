@@ -22,6 +22,8 @@ export interface WeatherResponse {
   city: {
     name: string;
     country: string;
+    lat: number;
+    lon: number;
   };
   current: CurrentWeather;
   days: WeatherDay[];

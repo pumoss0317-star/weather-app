@@ -1,9 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Calendar from "@/components/Calendar";
+import FavoriteCities from "@/components/FavoriteCities";
 import WeatherCard from "@/components/WeatherCard";
 import { fetchWeatherByCity, fetchWeatherByCoords, WeatherFetchError } from "@/lib/fetch-weather";
+import {
+  addFavorite,
+  getFavorites,
+  getLastCity,
+  isSameCity,
+  removeFavorite,
+  setLastCity,
+  type SavedCity,
+} from "@/lib/city-storage";
 import type { WeatherResponse } from "@/lib/weather-types";
 
 export default function Home() {
@@ -13,11 +23,88 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<SavedCity[]>([]);
+
+  // localStorageはサーバーに存在しないため、初期stateではなくマウント後のeffectで復元する
+  // （そうしないとSSR結果とクライアント初回描画が食い違いハイドレーションエラーになる）
+  useEffect(() => {
+    function restoreFavorites() {
+      setFavorites(getFavorites());
+    }
+    restoreFavorites();
+
+    const last = getLastCity();
+    if (!last) return;
+    let cancelled = false;
+    async function restoreLastCity(city: SavedCity) {
+      setLoading(true);
+      try {
+        const data = await fetchWeatherByCoords(city.lat, city.lon);
+        if (cancelled) return;
+        setCityInput(data.city.name);
+        applyResult(data);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof WeatherFetchError ? err.message : "予期しないエラーが発生しました");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    restoreLastCity(last);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function applyResult(data: WeatherResponse) {
     setWeather(data);
     setSelectedDate(data.days[0]?.date ?? "");
+    setLastCity({
+      name: data.city.name,
+      country: data.city.country,
+      lat: data.city.lat,
+      lon: data.city.lon,
+    });
   }
+
+  function handleSelectFavorite(city: SavedCity) {
+    setLoading(true);
+    setError(null);
+    fetchWeatherByCoords(city.lat, city.lon)
+      .then((data) => {
+        setCityInput(data.city.name);
+        applyResult(data);
+      })
+      .catch((err) => {
+        setError(err instanceof WeatherFetchError ? err.message : "予期しないエラーが発生しました");
+      })
+      .finally(() => setLoading(false));
+  }
+
+  function handleRemoveFavorite(city: SavedCity) {
+    setFavorites(removeFavorite(city));
+  }
+
+  function handleToggleFavorite() {
+    if (!weather) return;
+    const current: SavedCity = {
+      name: weather.city.name,
+      country: weather.city.country,
+      lat: weather.city.lat,
+      lon: weather.city.lon,
+    };
+    if (favorites.some((c) => isSameCity(c, current))) {
+      setFavorites(removeFavorite(current));
+    } else {
+      setFavorites(addFavorite(current));
+    }
+  }
+
+  const isCurrentFavorite =
+    weather != null &&
+    favorites.some((c) =>
+      isSameCity(c, { name: weather.city.name, country: weather.city.country, lat: weather.city.lat, lon: weather.city.lon })
+    );
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -97,6 +184,11 @@ export default function Home() {
               </button>
             </div>
           </form>
+          <FavoriteCities
+            favorites={favorites}
+            onSelect={handleSelectFavorite}
+            onRemove={handleRemoveFavorite}
+          />
         </div>
       </header>
 
@@ -123,6 +215,8 @@ export default function Home() {
               cityLabel={`${weather.city.name}, ${weather.city.country}`}
               day={selectedDay}
               current={isToday ? weather.current : null}
+              isFavorite={isCurrentFavorite}
+              onToggleFavorite={handleToggleFavorite}
             />
           </div>
         )}
